@@ -1,0 +1,15 @@
+version: "3.8"
+
+services:
+  anpr-app:
+    build: .
+    container_name: anpr-app
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app/static/plates:/app/static/plates
+      - ./app/static/frames:/app/static/frames
+      - ./app/static/hls:/app/static/hls
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
