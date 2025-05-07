@@ -105,6 +105,60 @@ Annotate frames with cv2.putText and cv2.rectangle for live visual feedback.
 
 Use HLS.js on frontend to ensure compatibility with all browsers.
 
+
+📡 API Endpoints
+🔹 GET /
+Description: Serves the main index.html HLS player page.
+
+Response: HTML page with embedded HLS.js video player.
+
+🔹 POST /start-stream
+Description: Starts ANPR processing for a given RTSP or video URL.
+
+Request Body (JSON):
+
+json
+Copy
+Edit
+{
+  "stream_url": "rtsp://your-camera-url",
+  "stream_id": "cam1"
+}
+Response:
+
+json
+Copy
+Edit
+{ "message": "Stream started", "stream_id": "cam1" }
+🔹 POST /stop-stream
+Description: Gracefully stops an active ANPR stream.
+
+Request Body (JSON):
+
+json
+Copy
+Edit
+{
+  "stream_id": "cam1"
+}
+Response:
+
+json
+Copy
+Edit
+{ "message": "Stream stopped", "stream_id": "cam1" }
+🔹 GET /frame/{stream_id}
+Description: Returns the latest processed frame (as JPEG) from the specified stream.
+
+Response: image/jpeg (or 404 if stream not found)
+
+🔹 GET /hls/stream1.m3u8
+Description: Serves the HLS .m3u8 playlist for live video playback.
+
+Use Case: Embed or load via HLS.js in the frontend.
+
+
+
 📌 TODO / Extensions
  Add camera registration UI
 
