@@ -1,66 +1,127 @@
-python -m uvicorn main:app --reload  // To run this project 
+🔍 Automatic Number Plate Recognition (ANPR) with HLS Streaming
+A production-ready ANPR web application that detects license plates from RTSP or MP4 video streams, extracts text using Tesseract OCR, and streams the annotated video using HLS for cross-device/browser support.
 
-✅ 1. RTSP/MP4 Video Processing
-Created a process_video() function to:
+🚀 Features
+✅ Live video input (RTSP/MP4)
 
-Capture frames from RTSP or MP4 source.
+✅ YOLOv8-based license plate detection
 
-Detect license plates using a YOLOv8 model.
+✅ Tesseract OCR for plate text extraction
 
-Crop detected plates and save them for debugging.
+✅ Real-time video annotation with bounding boxes and text
 
-Run OCR on cropped plates to extract text.
+✅ Debug storage of full frames and cropped plates
 
-✅ 2. Replaced EasyOCR with Tesseract
-Switched OCR from EasyOCR to pytesseract for improved reliability.
+✅ Converts streams to HLS (.m3u8) using FFmpeg
 
-Verified that tesseract is installed and accessible via PATH.
+✅ Web-accessible player with HLS.js
 
-Used basic or preprocessed versions of ocr_with_tesseract().
+✅ Scalable and modular FastAPI backend
 
-✅ 3. Frame Processing Optimization
-Verified the video was processing all frames (not just the first).
+📦 Tech Stack
+Layer	Technology
+Backend	FastAPI (Python)
+OCR	Tesseract OCR
+Detection	YOLOv8 (Ultralytics)
+Video	OpenCV, FFmpeg
+Streaming	HLS (HTTP Live Streaming)
+Frontend	Plain HTML + HLS.js
+Storage	Cropped Plates + Debug Frames
+Serving	Static files via FastAPI
 
-Printed and monitored frame count + FPS.
+🧰 Requirements
+🔧 Dependencies
+Install via pip:
 
-Reduced processing frequency to 1 frame per second using:
-
-python
+bash
 Copy
 Edit
-if frame_count % int(fps) != 0:
-    continue
-✅ 4. Debugging Support
-Saved:
+pip install fastapi uvicorn opencv-python pytesseract ultralytics python-multipart
+Also install:
 
-Debug full frames to app/static/frames/.
+Tesseract OCR (must be in system PATH)
 
-Cropped plates to app/static/plates/.
+FFmpeg (for stream conversion)
 
-✅ 5. MJPEG to HLS Conversion (Preparation)
-Identified the need to switch from MJPEG to HLS streaming for browser/device compatibility.
+Python ≥ 3.8
 
-Planned to use FFmpeg to convert RTSP to HLS format (.m3u8 + .ts segments).
+📂 Project Structure
+csharp
+Copy
+Edit
+anpr_app/
+├── app/
+│   ├── main.py                # FastAPI server
+│   ├── anpr_engine.py         # Video processing & detection
+│   ├── utils/
+│   │   └── ocr_utils.py       # OCR handling
+│   ├── static/
+│   │   ├── index.html         # Web UI
+│   │   ├── hls/               # HLS output (.m3u8, .ts)
+│   │   ├── frames/            # Debug full frames
+│   │   └── plates/            # Cropped license plates
+├── run.py                     # Entry point
+└── requirements.txt
+▶️ Running the Project
+1. Prepare Your Environment
+Make sure FFmpeg and Tesseract are installed and accessible via your system path.
 
-✅ 6. Serve Frontend with FastAPI
-Set up FastAPI to:
+2. Start the FastAPI Server
+bash
+Copy
+Edit
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+3. Start HLS Stream from RTSP
+Start an HLS stream using FFmpeg (example command):
 
-Serve static files (app/static/).
+bash
+Copy
+Edit
+ffmpeg -i rtsp://your-camera-url -an -c:v copy -f hls -hls_time 1 -hls_list_size 5 -hls_flags delete_segments app/static/hls/stream1.m3u8
+Or use auto-FFmpeg trigger inside the app (if added).
 
-Serve index.html by default on /.
+4. Open in Browser
+Visit:
 
-Prepare /static/hls/ directory to serve generated HLS streams.
+arduino
+Copy
+Edit
+http://localhost:8000/
+You'll see an HLS player for the video stream.
 
-Below are the example of stream::
+🧪 Debugging
+Debug frames are saved in: app/static/frames/
 
-rtsp://admin:admin@123@103.233.116.181:554/Streaming/channels/1 
+Cropped plates are saved in: app/static/plates/
 
-{
-  "source_url": "rtsp://admin:admin@123@192.168.0.109:554/Streaming/channels/101",
-  "stream_id": "cam1"
-}
+OCR is logged in the terminal (with timestamps and results)
 
-{
-  "source_url": "rtsp://localhost:8554/",
-  "stream_id": "cam1"
-}
+🛠️ Tips & Tricks
+Use cap.get(cv2.CAP_PROP_FPS) to read source FPS.
+
+Use frame skipping (if frame_count % int(fps) != 0) to reduce processing.
+
+Annotate frames with cv2.putText and cv2.rectangle for live visual feedback.
+
+Use HLS.js on frontend to ensure compatibility with all browsers.
+
+📌 TODO / Extensions
+ Add camera registration UI
+
+ Add authentication + token access
+
+ Save detections in a database (PostgreSQL/SQLite)
+
+ Export logs or create analytics dashboard
+
+ Add Docker support for portable deployment
+
+
+
+
+
+
+
+
+
+
