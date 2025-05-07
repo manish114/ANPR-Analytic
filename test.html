@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>HLS Stream</title>
+</head>
+<body>
+  <h2>HLS Live Stream</h2>
+  <video id="video" width="640" controls autoplay muted></video>
+
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script>
+    const video = document.getElementById('video');
+    const videoSrc = 'http://localhost:8000/hls/cam1/index.m3u8'; // Change to your actual path
+
+    if (Hls.isSupported()) {
+      const hls = new Hls();
+      hls.loadSource(videoSrc);
+      hls.attachMedia(video);
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = videoSrc;
+    } else {
+      alert('Your browser does not support HLS playback.');
+    }
+  </script>
+</body>
+</html>
