@@ -40,7 +40,7 @@ def start_anpr(request: ANPRRequest):
         daemon=True
     )
     thread.start()
-    #ffmpeg_proc = start_hls_ffmpeg(request.stream_id) #uncomment To start hls stream
+    ffmpeg_proc = start_hls_ffmpeg(request.stream_id) #uncomment To start hls stream
     active_streams[request.stream_id] = {"thread": thread, "stop_event": stop_event}
     return JSONResponse(content={"message": f"Started ANPR for stream: {request.stream_id}"})
 
