@@ -4,27 +4,25 @@ import uuid
 import time
 from datetime import datetime
 from ultralytics import YOLO
-import pytesseract
 import threading
-
-# Set tesseract path (adjust if needed)
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 output_dir = "app/static"
 os.makedirs(f"{output_dir}/plates", exist_ok=True)
 os.makedirs(f"{output_dir}/frames", exist_ok=True)
 os.makedirs(f"app/streams", exist_ok=True)
 
+import easyocr
+model = YOLO("models/best.pt")
+reader = easyocr.Reader(['en'], gpu=False)
 
-model = YOLO("models/yolov8_plate.pt")
-
+from utils import license_complies_format,format_license
 # Store latest frame per stream_id
 latest_frames = {}
 frame_locks = {}
 
 def update_frame(stream_id, frame):
-   # stream_path = f"app/streams/{stream_id}.jpg" ## to save frame with bounding box 
-   # cv2.imwrite(stream_path, frame)  # Overwrite latest frame ## to save frame with bounding box 
+    stream_path = f"app/streams/{stream_id}.jpg" ## to save frame with bounding box 
+    cv2.imwrite(stream_path, frame)  # Overwrite latest frame ## to save frame with bounding box 
     _, jpeg = cv2.imencode(".jpg", frame)
     frame_locks[stream_id] = threading.Lock()
     with frame_locks[stream_id]:
@@ -50,12 +48,12 @@ def stop_stream(stream_id):
 #     text = pytesseract.image_to_string(thresh, config='--psm 7')
 #     return text.strip()
 
-def ocr_with_tesseract(cropped_img):
-    text = pytesseract.image_to_string(cropped_img)
-    return text.strip()
+# def ocr_with_tesseract(cropped_img):
+#     text = pytesseract.image_to_string(cropped_img)
+#     return text.strip()
 
 def process_video(source_url: str, stream_id: str, stop_event, target_fps: int = 1):
-    source_url = "video.mp4"
+    #source_url = "video.mp4"
     cap = cv2.VideoCapture(source_url)
     video_fps = cap.get(cv2.CAP_PROP_FPS)
     print(f"🎥 Video FPS: {video_fps}")
@@ -83,27 +81,45 @@ def process_video(source_url: str, stream_id: str, stop_event, target_fps: int =
         frame_debug_path = f"{output_dir}/frames/frame_debug_{frame_count}.jpg"
         cv2.imwrite(frame_debug_path, frame)
         print(f"💾 Saved frame {frame_count} to: {frame_debug_path}")
+        results = model.predict(frame, save=True, conf=0.2)
+        
+        for result in results:
+            boxes = result.boxes
+            
+            for box_tensor in boxes.xyxy:
+                x1, y1, x2, y2 = map(int, box_tensor)
+                cropped_plate = frame[y1:y2, x1:x2]
+                gray_img = cv2.cvtColor(cropped_plate, cv2.COLOR_RGB2GRAY)
+                uid = str(uuid.uuid4())
+                plate_path = f"{output_dir}/plates/{uid}.jpg"
+                cv2.imwrite(plate_path, cropped_plate)
+                print(f"📷 Saved cropped plate: {plate_path}")
+                detections = reader.readtext(gray_img)
 
-        detections = model(frame)[0].boxes
-        for box in detections:
-            x1, y1, x2, y2 = map(int, box.xyxy[0])
-            cropped = frame[y1:y2, x1:x2]
+                for detection in detections:
+                    bbox, text, score = detection
+                    text = text.upper().replace(' ', '').replace('.', '').replace(',', '')
+                    formatted = format_license(text)
 
-            uid = str(uuid.uuid4())
-            plate_path = f"{output_dir}/plates/{uid}.jpg"
-            cv2.imwrite(plate_path, cropped)
-            print(f"📷 Saved cropped plate: {plate_path}")
+                    if license_complies_format(formatted):
+                        timestamp = datetime.utcnow().isoformat()
+                        print(f"🟩 Detected plate: {formatted} at {timestamp}")
 
-            plate_number = ocr_with_tesseract(cropped)
-            if plate_number:
-                timestamp = datetime.utcnow().isoformat()
-                print(f"🟩 Detected plate: {plate_number} at {timestamp}")
+                        cv2.putText(frame, formatted, (x1, y1 - 10),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+                        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
-                cv2.putText(frame, plate_number, (x1, y1 - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                    else:
+                        timestamp = datetime.utcnow().isoformat()
+                        print(f"🟩 Detected plate: {formatted} at {timestamp}")
+                        cv2.putText(frame, formatted+"not in format", (x1, y1 - 10),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+                        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
-        update_frame(stream_id, frame)
+    
+                
+
+            update_frame(stream_id, frame)
 
     cap.release()
     print(f"⏹️ Stopped ANPR stream: {stream_id}")
